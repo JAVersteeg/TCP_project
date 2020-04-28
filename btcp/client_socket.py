@@ -1,6 +1,8 @@
 from btcp.btcp_socket import BTCPSocket
 from btcp.lossy_layer import LossyLayer
 from btcp.constants import *
+from btcp.packet import TCPpacket
+from random import randint
 
 # bTCP client socket
 # A client application makes use of the services provided by bTCP by calling connect, send, disconnect, and close
@@ -15,7 +17,8 @@ class BTCPClientSocket(BTCPSocket):
 
     # Perform a three-way handshake to establish a connection
     def connect(self):
-        pass
+        packet = self.create_init_segment()
+        self._lossy_layer.send_segment(packet)
 
     # Send data originating from the application in a reliable way to the server
     def send(self, data):
@@ -28,3 +31,11 @@ class BTCPClientSocket(BTCPSocket):
     # Clean up any state
     def close(self):
         self._lossy_layer.destroy()
+        
+    def create_init_segment(self):
+        syn_nr = randint(0,65535) # random 16-bit integer
+        packet = TCPpacket(syn_nr)
+        packet.set_flags(False, True, False)
+        print(packet)
+        return packet
+        

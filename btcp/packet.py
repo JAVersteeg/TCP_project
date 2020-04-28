@@ -10,7 +10,7 @@ header_format = "IHHBBHI"
 class TCPpacket:
     
     def __init__(self, syn_nr = 0, ack_nr = 0, 
-                  flags = 0, window = 255, data_length = 1000, checksum = 0, 
+                  flags = 0, window = 255, data_length = 1008, checksum = 0, 
                   data = b""):
         """Constructor of the packet"""
         self.syn_nr = syn_nr
@@ -38,7 +38,7 @@ class TCPpacket:
     def pack(self):
         #print('Pack debug:\n', self)
         return pack(header_format, self.syn_nr, self.ack_nr,
-                    self.flags, self.window, self.data_length, self.checksum) + self.data
+                    self.flags, self.window, self.data_length, self.checksum, 0) +self.data
     
     def calculate_checksum(self):
         "Calculates the checksum over the tcp packet variables."
@@ -58,16 +58,16 @@ class TCPpacket:
         """Removes the data of a packet by replacing it with an empty bytestring"""
         self.data = b""
     
-    def set_flags(self, SYN =False, ACK=False, FIN=False):
+    def set_flags(self, ACK=False, SYN=False, FIN=False):
         """Sets the flags of a packet and then updates the checksum"""
-        if SYN:
-            self.flags = self.flags | 2
-        elif (self.flags & 2) == 2: #if syn flag is set deactivate syn
-            self.flags = self.flags ^ 2
         if ACK:
             self.flags = self.flags | 16
         elif (self.flags & 16) == 16: #if ack flag is set deactivate ack
             self.flags = self.flags ^ 16 
+        if SYN:
+            self.flags = self.flags | 2
+        elif (self.flags & 2) == 2: #if syn flag is set deactivate syn
+            self.flags = self.flags ^ 2
         if FIN:
             self.flags = self.flags | 1
         elif (self.flags & 1) == 1: #if fin flag is set deactivate fin

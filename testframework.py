@@ -2,6 +2,8 @@ import unittest
 import socket
 import time
 import sys
+from btcp.server_socket import BTCPServerSocket
+from btcp.client_socket import BTCPClientSocket
 
 timeout=100
 winsize=100
@@ -47,13 +49,20 @@ def run_command(command,cwd=None, shell=True):
 class TestbTCPFramework(unittest.TestCase):
     """Test cases for bTCP"""
     
-    def setUp(self):
+    def setUpServer(self):
         """Prepare for testing"""
         # default netem rule (does nothing)
         run_command(netem_add)
-        
         # launch localhost server
+        s = BTCPServerSocket(winsize, timeout)
         
+    def setUpClient(self):
+        """Set up client for testing"""
+        # launch client
+        s = BTCPClientSocket(winsize, timeout)
+        # connect client to server
+        s.connect()
+        print("setUpClient")
 
     def tearDown(self):
         """Clean up after testing"""
@@ -65,9 +74,9 @@ class TestbTCPFramework(unittest.TestCase):
     def test_ideal_network(self):
         """reliability over an ideal framework"""
         # setup environment (nothing to set)
-
+        self.setUpServer()
         # launch localhost client connecting to server
-        
+        self.setUpClient()
         # client sends content to server
         
         # server receives content from client

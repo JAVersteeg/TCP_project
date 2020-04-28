@@ -7,11 +7,10 @@ DEBUG = True
 
 class TCPpacket:
     
-    def __init__(self, stream_id=randint(0,100), syn_nr = 0, ack_nr = 0, 
+    def __init__(self, syn_nr = 0, ack_nr = 0, 
                   flags = 0, window = 255, data_length = 1000, checksum = 0, 
                   data = b""):
         """Constructor of the packet"""
-        self.stream_id = stream_id
         self.syn_nr = syn_nr
         self.ack_nr = ack_nr
         self.flags = flags
@@ -24,8 +23,7 @@ class TCPpacket:
     
     def __str__(self):
         """Prints all attributes of the packet"""
-        buf = ["Stream_ID: {}".format(self.stream_id)]      
-        buf.append('SYN_Number: {}'.format(self.syn_nr))
+        buf = ['SYN_Number: {}'.format(self.syn_nr))]
         buf.append('ACK_Number: {}'.format(self.ack_nr))
         buf.append('Flags: {}'.format(self.flags))
         buf.append('Window_size: {}'.format(self.window))
@@ -37,7 +35,7 @@ class TCPpacket:
         
     def pack(self):
         #print('Pack debug:\n', self)
-        return pack(header_format, self.stream_id, self.syn_nr, self.ack_nr,
+        return pack(header_format, self.syn_nr, self.ack_nr,
                     self.flags, self.window, self.data_length, self.checksum) + self.data
     
     def calculate_checksum(self):

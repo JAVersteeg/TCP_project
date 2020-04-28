@@ -5,6 +5,8 @@ from binascii import crc32
 
 DEBUG = True
 
+header_format = "IHHBBHI"
+
 class TCPpacket:
     
     def __init__(self, syn_nr = 0, ack_nr = 0, 
@@ -23,7 +25,7 @@ class TCPpacket:
     
     def __str__(self):
         """Prints all attributes of the packet"""
-        buf = ['SYN_Number: {}'.format(self.syn_nr))]
+        buf = ['SYN_Number: {}'.format(self.syn_nr)]
         buf.append('ACK_Number: {}'.format(self.ack_nr))
         buf.append('Flags: {}'.format(self.flags))
         buf.append('Window_size: {}'.format(self.window))

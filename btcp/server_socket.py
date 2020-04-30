@@ -13,7 +13,7 @@ class BTCPServerSocket(BTCPSocket):
 
     # Called by the lossy layer from another thread whenever a segment arrives
     def lossy_layer_input(self, segment):
-        print(segment)
+        print("Server: ", segment)
 
     # Wait for the client to initiate a three-way handshake
     def accept(self):

@@ -5,7 +5,7 @@ from binascii import crc32
 
 DEBUG = True
 
-header_format = "IHHBBHI"
+header_format = "HHBBHI"
 
 class TCPpacket:
     
@@ -17,10 +17,10 @@ class TCPpacket:
         self.ack_nr = ack_nr
         self.flags = flags
         self.window = window 
-        self.data_length = data_length  #defines how much of the 1000 bytes is data
+        self.data_length = data_length  #defines how much of the 1008 bytes is data
         self.checksum = checksum 
         self.data = data
-        if (checksum == 0): #if checksum is not defined (new packet) calculate correct checksum
+        if (checksum == 0): #if checksum is not defined (renew packet) calculate correct checksum
             self.checksum = self.calculate_checksum()
     
     def __str__(self):
@@ -38,11 +38,11 @@ class TCPpacket:
     def pack(self):
         #print('Pack debug:\n', self)
         return pack(header_format, self.syn_nr, self.ack_nr,
-                    self.flags, self.window, self.data_length, self.checksum, 0) +self.data
+                    self.flags, self.window, self.data_length, self.checksum) + self.data
     
     def calculate_checksum(self):
         "Calculates the checksum over the tcp packet variables."
-        setattr(self, 'checksum', 0)        
+        setattr(self, 'checksum', 0)
         return crc32(self.pack())
     
     def update_checksum(self):

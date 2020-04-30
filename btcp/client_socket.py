@@ -37,5 +37,5 @@ class BTCPClientSocket(BTCPSocket):
         packet = TCPpacket(syn_nr)
         packet.set_flags(False, True, False)
         print(packet)
-        return packet
+        return packet.pack()
         

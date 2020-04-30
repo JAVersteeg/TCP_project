@@ -9,11 +9,11 @@ header_format = "HHBBHI"
 
 class TCPpacket:
     
-    def __init__(self, syn_nr = 0, ack_nr = 0, 
+    def __init__(self, seq_nr = 0, ack_nr = 0, 
                   flags = 0, window = 255, data_length = 1008, checksum = 0, 
                   data = b""):
         """Constructor of the packet"""
-        self.syn_nr = syn_nr
+        self.seq_nr = seq_nr
         self.ack_nr = ack_nr
         self.flags = flags
         self.window = window 
@@ -25,7 +25,7 @@ class TCPpacket:
     
     def __str__(self):
         """Prints all attributes of the packet"""
-        buf = ['SYN_Number: {}'.format(self.syn_nr)]
+        buf = ['SEQ_Number: {}'.format(self.seq_nr)]
         buf.append('ACK_Number: {}'.format(self.ack_nr))
         buf.append('Flags: {}'.format(self.flags))
         buf.append('Window_size: {}'.format(self.window))
@@ -36,8 +36,8 @@ class TCPpacket:
         
         
     def pack(self):
-        #print('Pack debug:\n', self)
-        return pack(header_format, self.syn_nr, self.ack_nr,
+        print('Pack debug:\n', self)
+        return pack(header_format, self.seq_nr, self.ack_nr,
                     self.flags, self.window, self.data_length, self.checksum) + self.data
     
     def calculate_checksum(self):
@@ -91,13 +91,13 @@ class TCPpacket:
             packet_type = "DATA"
         return packet_type
     
-    def up_syn_nr(self, value):
+    def up_seq_nr(self, value):
         """
-            Updates the syn number of a packet by adding 'value' to the current
-            syn number of the packet and then updating the checksum of this 
+            Updates the sequence number of a packet by adding 'value' to the current
+            sequence number of the packet and then updating the checksum of this 
             packet (because since the contents have changed)
         """
-        self.syn_nr = self.syn_nr + value
+        self.seq_nr = self.seq_nr + value
         self.update_checksum()
         
     def up_ack_nr(self, value):

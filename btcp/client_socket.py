@@ -33,8 +33,8 @@ class BTCPClientSocket(BTCPSocket):
         self._lossy_layer.destroy()
         
     def create_init_segment(self):
-        syn_nr = randint(0,65535) # random 16-bit integer
-        packet = TCPpacket(syn_nr)
+        seq_nr = randint(0,65535) # random 16-bit integer
+        packet = TCPpacket(seq_nr)
         packet.set_flags(False, True, False)
         print(packet)
         return packet.pack()

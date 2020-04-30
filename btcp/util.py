@@ -1,3 +1,5 @@
+from enum import Enum
+
 class State(Enum):
     CLOSED = 0
     LISTEN = 1

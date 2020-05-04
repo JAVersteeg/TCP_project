@@ -94,6 +94,9 @@ class TCPpacket:
     def get_seq_nr(self):
         return self.syn_nr
     
+    def get_ack_nr(self):
+        return self.ack_nr
+    
     def up_seq_nr(self, value):
         """
             Updates the syn number of a packet by adding 'value' to the current

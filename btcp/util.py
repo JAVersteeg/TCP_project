@@ -5,6 +5,7 @@ class State(Enum):
     LISTEN = 1
     SYN_SEND = 2
     SYN_RECVD = 3
+    HNDSH_COMP = 11
     ESTABLISHED = 4
     FIN_WAIT_1 = 5
     FIN_WAIT_2 = 6

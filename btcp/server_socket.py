@@ -19,8 +19,9 @@ class BTCPServerSocket(BTCPSocket):
 
     # Called by the lossy layer from another thread whenever a segment arrives
     def lossy_layer_input(self, segment):
-        segment = btcp.packet.unpack_from_socket(segment)
         print("SEGMENT RECEIVED")
+        segment = btcp.packet.unpack_from_socket(segment)
+        
         if not segment.confirm_checksum():
             # discard segment
             pass

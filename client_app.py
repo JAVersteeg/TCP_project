@@ -17,7 +17,7 @@ def main():
     
 
     # Clean up any state
-    s.close()
+    #s.close()
 
 
 main()

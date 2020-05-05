@@ -4,6 +4,7 @@ from btcp.btcp_socket import BTCPSocket
 from btcp.constants import *
 from random import randint
 from btcp.util import State
+from btcp.packet import TCPpacket
 
 
 # The bTCP server socket
@@ -25,11 +26,17 @@ class BTCPServerSocket(BTCPSocket):
             pass
         if segment.packet_type() == "SYN":
             self.state = State.SYN_RECVD
-            response_thread = threading.Thread(target=self.handle_handshake_response, args=(segment,))
+            response_thread = threading.Thread(target=self.handshake_response_thread, args=(segment,))
             response_thread.start()
         elif segment.packet_type() == "ACK":
             self.state = State.HNDSH_COMP
-        else: pass
+        elif segment.packet_type() == "FIN":
+            self.state = State.FIN_RECVD
+            con_close_thread = threading.Thread(target=self.connection_close_thread)
+            con_close_thread.start()
+            self.close()
+        else: 
+            pass
 
     # Wait for the client to initiate a three-way handshake
     def accept(self):
@@ -42,20 +49,26 @@ class BTCPServerSocket(BTCPSocket):
     # Clean up any state
     def close(self):
         self._lossy_layer.destroy()
-        
-    def handle_handshake_response(self, segment):
+    
+    # 
+    def handshake_response_thread(self, segment):
         seq_nr = randint(0,65535) - segment.get_seq_nr()
         ack_nr = segment.get_seq_nr() + 1
         segment.up_seq_nr(seq_nr)
         segment.up_ack_nr(ack_nr)
         segment.set_flags(True, True, False)
-        print ("SYN-ACK sent")
         self._lossy_layer.send_segment(segment.pack())
         self.state = State.SYN_SEND
         while True: # as long as no ACK handshake segment is received
             time.sleep(self.timeout/1000)
             if (self.state != State.HNDSH_COMP):
-                print("SYN-ACK sent")
                 self._lossy_layer.send_segment(segment.pack())
             else:
                 break
+    
+    # 
+    def connection_close_thread(self):
+        segment = TCPpacket()
+        segment.set_flags(True, False, True)
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)

@@ -36,7 +36,6 @@ class TCPpacket:
         
         
     def pack(self):
-        print('Pack debug:\n', self)
         return pack(header_format, self.seq_nr, self.ack_nr,
                     self.flags, self.window, self.data_length, self.checksum) + self.data
     
@@ -92,7 +91,7 @@ class TCPpacket:
         return packet_type
     
     def get_seq_nr(self):
-        return self.syn_nr
+        return self.seq_nr
     
     def get_ack_nr(self):
         return self.ack_nr

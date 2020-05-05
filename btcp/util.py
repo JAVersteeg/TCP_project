@@ -1,8 +1,12 @@
+from enum import Enum
+
 class State(Enum):
     CLOSED = 0
     LISTEN = 1
     SYN_SEND = 2
     SYN_RECVD = 3
+    SYN_ACK_RECVD = 12
+    HNDSH_COMP = 11
     ESTABLISHED = 4
     FIN_WAIT_1 = 5
     FIN_WAIT_2 = 6

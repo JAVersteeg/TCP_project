@@ -1,11 +1,11 @@
 from random import randint
 from struct import pack, unpack
 from enum import Enum
-from binascii import crc32
+from binascii import crc_hqx
 
 DEBUG = True
 
-header_format = "HHBBHI"
+header_format = "HHBBHH"
 
 class TCPpacket:
     
@@ -43,7 +43,7 @@ class TCPpacket:
     def calculate_checksum(self):
         "Calculates the checksum over the tcp packet variables."
         setattr(self, 'checksum', 0)
-        return crc32(self.pack())
+        return crc_hqx(self.pack(), 0)
     
     def update_checksum(self):
         self.checksum = self.calculate_checksum()
@@ -62,15 +62,15 @@ class TCPpacket:
         """Sets the flags of a packet and then updates the checksum"""
         if ACK:
             self.flags = self.flags | 16
-        elif (self.flags & 16) == 16: #if ack flag is set deactivate ack
+        elif (self.flags & 16) == 16: # if ack flag is set deactivate ack
             self.flags = self.flags ^ 16 
         if SYN:
             self.flags = self.flags | 2
-        elif (self.flags & 2) == 2: #if syn flag is set deactivate syn
+        elif (self.flags & 2) == 2: # if syn flag is set deactivate syn
             self.flags = self.flags ^ 2
         if FIN:
             self.flags = self.flags | 1
-        elif (self.flags & 1) == 1: #if fin flag is set deactivate fin
+        elif (self.flags & 1) == 1: # if fin flag is set deactivate fin
             self.flags = self.flags ^ 1
         self.update_checksum()
     
@@ -91,6 +91,15 @@ class TCPpacket:
             packet_type = "DATA"
         return packet_type
     
+<<<<<<< HEAD
+=======
+    def get_seq_nr(self):
+        return self.syn_nr
+    
+    def get_ack_nr(self):
+        return self.ack_nr
+    
+>>>>>>> handshake
     def up_seq_nr(self, value):
         """
             Updates the sequence number of a packet by adding 'value' to the current
@@ -116,9 +125,9 @@ class TCPpacket:
 
     
 
-def get_packet_from_stream(bytes):
-    header_vars = unpack(header_format, bytes[0:16])
-    data = bytes[16:]
+def unpack_from_socket(bytes):
+    header_vars = unpack(header_format, bytes[0][0:10])
+    data = bytes[0][10:]
     packet = TCPpacket(*header_vars, data)     #*var unpacks list to vars [a, b] -> a,b
     if DEBUG:
         print("Received:", packet.packet_type())

@@ -91,15 +91,12 @@ class TCPpacket:
             packet_type = "DATA"
         return packet_type
     
-<<<<<<< HEAD
-=======
     def get_seq_nr(self):
         return self.syn_nr
     
     def get_ack_nr(self):
         return self.ack_nr
     
->>>>>>> handshake
     def up_seq_nr(self, value):
         """
             Updates the sequence number of a packet by adding 'value' to the current

@@ -1,8 +1,7 @@
-import socket, time
+import socket, time, btcp.packet, threading
 from btcp.lossy_layer import LossyLayer
 from btcp.btcp_socket import BTCPSocket
 from btcp.constants import *
-import btcp.packet
 from random import randint
 from btcp.util import State
 
@@ -19,19 +18,17 @@ class BTCPServerSocket(BTCPSocket):
 
     # Called by the lossy layer from another thread whenever a segment arrives
     def lossy_layer_input(self, segment):
-        print("SEGMENT RECEIVED")
         segment = btcp.packet.unpack_from_socket(segment)
         
         if not segment.confirm_checksum():
             # discard segment
             pass
         if segment.packet_type() == "SYN":
-            print("SYN RECVD")
             self.state = State.SYN_RECVD
-            self.handle_handshake_response(segment)
+            response_thread = threading.Thread(target=self.handle_handshake_response, args=(segment,))
+            response_thread.start()
         elif segment.packet_type() == "ACK":
             self.state = State.HNDSH_COMP
-            print("SERVER RECEIVED ACK")
         else: pass
 
     # Wait for the client to initiate a three-way handshake
@@ -52,13 +49,13 @@ class BTCPServerSocket(BTCPSocket):
         segment.up_seq_nr(seq_nr)
         segment.up_ack_nr(ack_nr)
         segment.set_flags(True, True, False)
+        print ("SYN-ACK sent")
         self._lossy_layer.send_segment(segment.pack())
-        print ("SYN_SEND")
         self.state = State.SYN_SEND
         while True: # as long as no ACK handshake segment is received
             time.sleep(self.timeout/1000)
             if (self.state != State.HNDSH_COMP):
-                print ("SYN_SEND ...")
+                print("SYN-ACK sent")
                 self._lossy_layer.send_segment(segment.pack())
             else:
-                break    
+                break

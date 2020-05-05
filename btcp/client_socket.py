@@ -14,6 +14,7 @@ class BTCPClientSocket(BTCPSocket):
         self.window = window
         self.timeout = timeout
         self.termination_count = 5
+        self.threads = []
         self._lossy_layer = LossyLayer(self, CLIENT_IP, CLIENT_PORT, SERVER_IP, SERVER_PORT)
         self.state = State.CLOSED
         
@@ -24,6 +25,7 @@ class BTCPClientSocket(BTCPSocket):
         if (segment_type == "SYN-ACK"):
             self.state = State.SYN_ACK_RECVD
             ack_thread = threading.Thread(target=self.handshake_ack_thread, args=(segment,))
+            self.threads.append(ack_thread)
             ack_thread.start()
         elif segment_type == "FIN_ACK":
             self.state = State.FIN_ACK_RECVD
@@ -33,6 +35,7 @@ class BTCPClientSocket(BTCPSocket):
     # Initiate a three-way handshake with the server.
     def connect(self):
         connect_thread = threading.Thread(target=self.con_establish_thread)
+        self.threads.append(connect_thread)
         connect_thread.start()
         self.state = State.SYN_SEND
         
@@ -46,13 +49,15 @@ class BTCPClientSocket(BTCPSocket):
 
     # Clean up any state
     def close(self):
+        print("CLIENT CLOSED")
         self._lossy_layer.destroy()
         
     # Initiate termination of connection with server
     def close_client(self):
         close_thread = threading.Thread(target=self.con_close_thread)
+        self.threads.append(close_thread)
         close_thread.start()
-        close_thread.join()
+        self.join_threads()
         self.close()
     
     # Send the response to the server's ACK of the handshake.
@@ -94,4 +99,8 @@ class BTCPClientSocket(BTCPSocket):
             else:
                 self.state = State.CLOSED
                 break
+            
+    def join_threads(self):
+        for t in self.threads:
+            t.join()
         

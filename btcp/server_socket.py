@@ -14,6 +14,7 @@ class BTCPServerSocket(BTCPSocket):
         super().__init__(window, timeout)
         self.window = window
         self.timeout = timeout
+        self.threads = []
         self._lossy_layer = LossyLayer(self, SERVER_IP, SERVER_PORT, CLIENT_IP, CLIENT_PORT)
         self.state = State.LISTEN
 
@@ -27,13 +28,14 @@ class BTCPServerSocket(BTCPSocket):
         if segment.packet_type() == "SYN":
             self.state = State.SYN_RECVD
             response_thread = threading.Thread(target=self.handshake_response_thread, args=(segment,))
+            self.threads.append(response_thread)
             response_thread.start()
         elif segment.packet_type() == "ACK":
             self.state = State.HNDSH_COMP
         elif segment.packet_type() == "FIN":
             self.state = State.FIN_RECVD
-            con_close_thread = threading.Thread(target=self.connection_close_thread)
-            con_close_thread.start()
+            self.close_connection()
+            time.sleep(2)
             self.close()
         else: 
             pass
@@ -48,6 +50,8 @@ class BTCPServerSocket(BTCPSocket):
 
     # Clean up any state
     def close(self):
+        self.join_threads()
+        print("DESTROY SERVER SOCKET")
         self._lossy_layer.destroy()
     
     # 
@@ -67,8 +71,12 @@ class BTCPServerSocket(BTCPSocket):
                 break
     
     # 
-    def connection_close_thread(self):
+    def close_connection(self):
         segment = TCPpacket()
         segment.set_flags(True, False, True)
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
+        
+    def join_threads(self):
+        for t in self.threads:
+            t.join()

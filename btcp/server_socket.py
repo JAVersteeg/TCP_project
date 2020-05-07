@@ -73,7 +73,3 @@ class BTCPServerSocket(BTCPSocket):
         segment.set_flags(True, False, True)
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
-        
-    def join_threads(self):
-        for t in self.threads:
-            t.join()

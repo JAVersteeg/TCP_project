@@ -3,8 +3,7 @@ from btcp.lossy_layer import LossyLayer
 from btcp.btcp_socket import BTCPSocket
 from btcp.constants import *
 from random import randint
-from btcp.util import State
-from errors import SegmentNotFoundError
+from btcp.state import State
 
 
 # The bTCP server socket

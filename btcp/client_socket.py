@@ -38,7 +38,9 @@ class BTCPClientSocket(BTCPSocket):
     # Send data originating from the application in a reliable way to the server
     def send(self, data):
         segments_list = load_file(data)
+        data_transfer(segments_list)
         # TODO: add functions to send data
+        
 
     # Perform a handshake to terminate a connection
     def disconnect(self):
@@ -87,7 +89,7 @@ class BTCPClientSocket(BTCPSocket):
             rawbytes = binary_file.read()
             return rawbytes
 
-    # TODO: add padding to final packet    
+        
     def rawbytes_to_sections(self, rawbytes):
         """
             Takes the bytes and divides these into chunks of 1008 bytes (except the
@@ -103,7 +105,8 @@ class BTCPClientSocket(BTCPSocket):
                 data_sections.append(rawbytes)
                 rawbytes = b''
         return data_sections
-        
+
+    # TODO: add padding to final segment    
     def file_data_to_segments_list(self, file_data):
         """
             Takes the list of file_data (in chunks of 1008 bytes) and creates
@@ -118,3 +121,81 @@ class BTCPClientSocket(BTCPSocket):
             seq_nr = seq_nr + segment.data_length  
             segments_list.append(segment)
         return segments_list    
+
+
+    # TODO: change name of DATA_packet
+    def packet_thread(self, DATA_packet):
+    """
+        First sends a packet and then checks the list of acks for 
+        [timeout] seconds to see if the corresponding ack has been received,
+        if not, a timeout is triggered. This timeout causes the packet to 
+        be resend
+    """
+    ack_received = False
+    
+    while not ack_received:
+        send_packet(DATA_packet)
+        ack_nr_DATA_packet = getattr(DATA_packet, 'syn_nr') + getattr(DATA_packet, 'data_length')
+        time.sleep(TIMEOUT/1000) # wait for incomming ack
+        if ack_nr_DATA_packet in acks_list: #ack received
+            self.windowLock.acquire()
+            self.window_remaining += 1
+            self.windowLock.release()
+            ack_received = True
+        else:
+            continue 
+        
+    def recv_acks_thread(self):
+        """ 
+            Thread that continuosly to receive acks and puts its ack_nr into a 
+            sorted list
+        """ 
+        while not self.transfer_complete:
+            try:
+                byte_stream, addr = sock.recvfrom(1016)
+                recvd_packet = utils.get_packet_from_stream(byte_stream)  
+                if (recvd_packet.packet_type() == "ACK") and recvd_packet.confirm_checksum():
+                    bisect.insort(acks_list,recvd_packet.ack_nr) # adds the ack nr to the sorted list
+                    print(acks_list)
+            except socket.timeout:
+                continue
+        print("Recv acks stopped")       
+
+    def data_transfer(self, segments_list):
+        """
+            Sends the file from the client to the server by distributing the
+            data over packets.
+        """
+        acks_thread = threading.Thread(target=self.recv_acks_thread)
+        acks_thread.start()
+        
+        window_remaining = self.window
+        thread_list = [threading.Thread(target=self.packet_thread, args= (segment,)) for segment in segments_list]
+        sending_list = thread_list
+        while (len(sending_list) > 0 ): # keeps looping until the list is empty
+            # when there are less packets remaining to be send then the window size
+            sending_list = sending_list
+            if len(sending_list) <= window_remaining:
+                for t in sending_list:
+                    self.windowLock.acquire()
+                    window_remaining -= 1
+                    self.windowLock.release()
+                    t.start()
+                sending_list = []
+            # when there are more packets remaining to be send then the window size
+            else:
+                number_of_threads = window_remaining
+                for t in sending_list[:number_of_threads]: # number_of_packets could be window_remaining
+                    self.windowLock.acquire()
+                    window_remaining -= 1
+                    self.windowLock.release()
+                    t.start()
+                sending_list = sending_list[number_of_threads:]
+        
+        for thread in thread_list:
+            thread.join()
+        self.transfer_complete = True
+        acks_thread.join()
+        print("Length segments list: ", len(packet_list))
+        print("Data transmission is finished") 
+  

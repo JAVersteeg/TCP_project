@@ -20,8 +20,7 @@ def main():
 
     s.disconnect()
 
+
     # Clean up any state
     s.close()
-
-
 main()

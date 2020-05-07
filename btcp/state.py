@@ -6,6 +6,8 @@ class State(Enum):
     SYN_SEND = 2
     SYN_RECVD = 3
     SYN_ACK_RECVD = 12
+    FIN_RECVD = 14
+    FIN_ACK_RECVD = 13
     HNDSH_COMP = 11
     ESTABLISHED = 4
     FIN_WAIT_1 = 5

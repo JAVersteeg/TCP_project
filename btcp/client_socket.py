@@ -3,8 +3,9 @@ from btcp.lossy_layer import LossyLayer
 from btcp.constants import *
 from btcp.packet import TCPpacket
 import btcp.packet, time, threading
+from concurrent.futures import ThreadPoolExecutor
 from random import randint
-from btcp.util import State
+from btcp.state import State
 
 # bTCP client socket
 # A client application makes use of the services provided by bTCP by calling connect, send, disconnect, and close
@@ -13,6 +14,8 @@ class BTCPClientSocket(BTCPSocket):
         super().__init__(window, timeout)
         self.window = window
         self.timeout = timeout
+        self.termination_count = 5
+        self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, CLIENT_IP, CLIENT_PORT, SERVER_IP, SERVER_PORT)
         self.state = State.CLOSED
         self.seq = 0 # gets set after connect()
@@ -24,26 +27,31 @@ class BTCPClientSocket(BTCPSocket):
         segment_type = segment.packet_type()
         if (segment_type == "SYN-ACK"):
             self.state = State.SYN_ACK_RECVD
-            ack_thread = threading.Thread(target=self.handshake_ack_thread, args=(segment,))
-            ack_thread.start()
+            self.thread_executor.submit(self.handshake_ack_thread, segment)
+        elif segment_type == "FIN_ACK":
+            self.state = State.FIN_ACK_RECVD
         else:
             pass
 
     # Initiate a three-way handshake with the server.
     def connect(self):
-        connect_thread = threading.Thread(target=self.con_establish_thread)
-        connect_thread.start()
+        self.thread_executor.submit(self.con_establish_thread)
         self.state = State.SYN_SEND
 
     # Send data originating from the application in a reliable way to the server
     def send(self, data):
-        segments_list = load_file(data)
+        #segments_list = load_file(data)
         # TODO: add functions to send data
+        pass
 
     # Perform a handshake to terminate a connection
     def disconnect(self):
         pass
-        
+
+    # Clean up any state
+    def close(self):
+        self._lossy_layer.destroy()
+    
     # Send the response to the server's ACK of the handshake.
     def handshake_ack_thread(self, segment):
         seq_nr = segment.get_ack_nr() + 1
@@ -51,27 +59,25 @@ class BTCPClientSocket(BTCPSocket):
         segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
         segment.up_ack_nr(ack_nr - seq_nr) # remove als ack_nr (which is now seq_nr) and replace by new ack_nr
         segment.set_flags(True, False, False) # set ACK flag
-        print("ACK Sent")
-        self._lossy_layer.send_segment(segment.pack())
-
-
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
+    
+    # Runnable function to establish a connection with the server
     def con_establish_thread(self):
         seq_nr = randint(0,65535) # random 16-bit integer
-        segment = TCPpacket(seq)
+        segment = TCPpacket(seq_nr)
         segment.set_flags(False, True, False) # set SYN flag
-        print("SYN sent")
-        self._lossy_layer.send_segment(segment.pack())
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
         while True:
-            
             time.sleep(self.timeout/1000)
             if self.state != State.SYN_ACK_RECVD:
-                print("SYN sent")
-                self._lossy_layer.send_segment(segment.pack())
+                self._lossy_layer.send_segment(send_segment)
             else:
                 self.state = State.HNDSH_COMP
                 break
 
-    #Loading file
+    # Loading file
     # TODO: go one folder upwards to read the file
     def load_file(self, file):
         """Loads the file and converts it into a list of segments that are ready to be send"""
@@ -115,6 +121,6 @@ class BTCPClientSocket(BTCPSocket):
             segment = TCPpacket(seq_nr=self.seq_nr, ack_nr=self.ack_nr, window=self.window)
             segment.set('data', data)
             segment.up_seq_nr(segment.data_length)
-            seq_nr = seq_nr + segment.data_length  
+            seq_nr += segment.data_length  
             segments_list.append(segment)
         return segments_list    

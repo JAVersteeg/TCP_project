@@ -68,4 +68,3 @@ class BTCPClientSocket(BTCPSocket):
             else:
                 self.state = State.HNDSH_COMP
                 break
-        

@@ -105,6 +105,10 @@ class TCPpacket:
         self.seq_nr = up_nr(self.seq_nr, value)
         self.update_checksum()
         
+        # Reset sequence number to 1 to acknowledge a data packet.
+    def reset_seq_nr(self):
+        self.seq_nr = 1
+        
     def up_ack_nr(self, value):
         """
             Updates the ack number of a packet by adding 'value' to the current

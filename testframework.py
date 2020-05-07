@@ -53,7 +53,8 @@ class TestbTCPFramework(unittest.TestCase):
         # default netem rule (does nothing)
         run_command(netem_add)
         # launch localhost server
-        BTCPServerSocket(winsize, timeout)
+        server = BTCPServerSocket(winsize, timeout)
+        server.accept()
         
     def setUpClient(self):
         """Set up client for testing"""
@@ -64,8 +65,7 @@ class TestbTCPFramework(unittest.TestCase):
         # clean the environment
         run_command(netem_del)
         
-        # close server
-        
+        # close server        
 
     def test_ideal_network(self):
         """reliability over an ideal framework"""
@@ -73,7 +73,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.setUpServer()
         time.sleep(0.05)
         # launch localhost client connecting to server
-        BTCPClientSocket(winsize, timeout)
+        client = BTCPClientSocket(winsize, timeout)
+        client.connect()
         # client sends content to server
         
         # server receives content from client
@@ -111,11 +112,8 @@ class TestbTCPFramework(unittest.TestCase):
         """reliability over network with packet loss"""
         # setup environment
         run_command(netem_change.format("loss 10% 25%"))
-        self.setUpServer()
-        time.sleep(0.05)
         # launch localhost client connecting to server
-        client = BTCPClientSocket(winsize, timeout)
-        client.connect()        
+               
         # client sends content to server
         
         # server receives content from client

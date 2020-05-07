@@ -17,7 +17,7 @@ def main():
     s.accept()
 
     # Clean up any state
-    s.close()
+    #s.close()
 
 
 main()

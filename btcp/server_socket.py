@@ -4,7 +4,8 @@ from btcp.btcp_socket import BTCPSocket
 from btcp.constants import *
 from random import randint
 from btcp.state import State
-
+from btcp.packet import TCPpacket
+from concurrent.futures import ThreadPoolExecutor
 
 # The bTCP server socket
 # A server application makes use of the services provided by bTCP by calling accept, recv, and close
@@ -13,9 +14,10 @@ class BTCPServerSocket(BTCPSocket):
         super().__init__(window, timeout)
         self.window = window
         self.timeout = timeout
+        self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, SERVER_IP, SERVER_PORT, CLIENT_IP, CLIENT_PORT)
         self.segment_buffer = {}    # segments that are received out of order
-        self.data_collection        # data section of segments that are received in order, gets turned into output file
+        self.data_collection = []       # data section of segments that are received in order, gets turned into output file
         self.exp_seq_nr = 0        # sequence number of packet that is expected next
         self.state = State.CLOSED
         # start thread that checks segment_buffer when exp_seq_nr is updated.
@@ -28,13 +30,12 @@ class BTCPServerSocket(BTCPSocket):
             pass
         if segment.packet_type() == "SYN":
             self.state = State.SYN_RECVD
-            response_thread = threading.Thread(target=self.handle_handshake_response, args=(segment,))
-            response_thread.start()
+            self.thread_executor.submit(self.handshake_response_thread, segment)
         elif segment.packet_type() == "ACK":
             self.state = State.HNDSH_COMP
             # exp_seq_nr = sequence number advertised by client in this segment.
-        elif segment.pack_type() == "FIN":
-            pass
+        elif segment.packet_type() == "FIN":
+            self.state = State.FIN_RECVD
         elif segment.pack_type() == "DATA":     
             self.send_data_ack(segment)
             if segment.getattr(segment, 'seq_nr') == self.exp_seq_nr:
@@ -60,7 +61,8 @@ class BTCPServerSocket(BTCPSocket):
     # Clean up any state
     def close(self):
         self._lossy_layer.destroy()
-        
+    
+    # 
     def handshake_response_thread(self, segment):
         seq_nr = randint(0,65535) - segment.get_seq_nr()
         ack_nr = segment.get_seq_nr() + 1
@@ -76,13 +78,15 @@ class BTCPServerSocket(BTCPSocket):
             else:
                 break
     
+    #
     def send_data_ack(self, segment):
         segment.remove_data()
         segment.up_ack_nr(getattr(segment, 'seq_nr'))
         segment.reset_seq_nr()
         segment.set_flags(ACK=True)
         self._lossy_layer.send_segment(segment)
-        
+    
+    #    
     def update_buffer_thread(self):
         while self.state != State.CLOSED:
             seq_nr = self.exp_seq_nr

@@ -19,5 +19,4 @@ def main():
     # Clean up any state
     c.close()
 
-
 main()

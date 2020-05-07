@@ -54,6 +54,7 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_add)
         # launch localhost server
         server = BTCPServerSocket(winsize, timeout)
+        server.accept()
         
     def setUpClient(self):
         """Set up client for testing"""

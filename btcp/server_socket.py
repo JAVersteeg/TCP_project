@@ -49,13 +49,11 @@ class BTCPServerSocket(BTCPSocket):
         segment.up_seq_nr(seq_nr)
         segment.up_ack_nr(ack_nr)
         segment.set_flags(True, True, False)
-        print ("SYN-ACK sent")
         self._lossy_layer.send_segment(segment.pack())
         self.state = State.SYN_SEND
         while True: # as long as no ACK handshake segment is received
             time.sleep(self.timeout/1000)
             if (self.state != State.HNDSH_COMP):
-                print("SYN-ACK sent")
                 self._lossy_layer.send_segment(segment.pack())
             else:
                 break

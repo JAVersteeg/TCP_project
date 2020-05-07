@@ -53,8 +53,7 @@ class TestbTCPFramework(unittest.TestCase):
         # default netem rule (does nothing)
         run_command(netem_add)
         # launch localhost server
-        server = BTCPServerSocket(winsize, timeout)
-        server.accept()
+        BTCPServerSocket(winsize, timeout)
         
     def setUpClient(self):
         """Set up client for testing"""
@@ -74,8 +73,7 @@ class TestbTCPFramework(unittest.TestCase):
         self.setUpServer()
         time.sleep(0.05)
         # launch localhost client connecting to server
-        client = BTCPClientSocket(winsize, timeout)
-        client.connect()
+        BTCPClientSocket(winsize, timeout)
         # client sends content to server
         
         # server receives content from client

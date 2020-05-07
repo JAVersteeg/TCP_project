@@ -36,7 +36,6 @@ class TCPpacket:
         
         
     def pack(self):
-        print('Pack debug:\n', self)
         return pack(header_format, self.seq_nr, self.ack_nr,
                     self.flags, self.window, self.data_length, self.checksum) + self.data
     

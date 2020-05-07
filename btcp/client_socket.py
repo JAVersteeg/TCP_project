@@ -40,7 +40,6 @@ class BTCPClientSocket(BTCPSocket):
         segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
         segment.up_ack_nr(ack_nr - seq_nr) # remove als ack_nr (which is now seq_nr) and replace by new ack_nr
         segment.set_flags(True, False, False) # set ACK flag
-        print("ACK Sent")
         self._lossy_layer.send_segment(segment.pack())
         
     
@@ -60,13 +59,11 @@ class BTCPClientSocket(BTCPSocket):
         syn_nr = randint(0,65535) # random 16-bit integer
         segment = TCPpacket(syn_nr)
         segment.set_flags(False, True, False) # set SYN flag
-        print("SYN sent")
         self._lossy_layer.send_segment(segment.pack())
         while True:
             
             time.sleep(self.timeout/1000)
             if self.state != State.SYN_ACK_RECVD:
-                print("SYN sent")
                 self._lossy_layer.send_segment(segment.pack())
             else:
                 self.state = State.HNDSH_COMP

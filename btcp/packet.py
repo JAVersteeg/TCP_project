@@ -92,7 +92,7 @@ class TCPpacket:
         return packet_type
     
     def get_seq_nr(self):
-        return self.syn_nr
+        return self.seq_nr
     
     def get_ack_nr(self):
         return self.ack_nr
@@ -103,7 +103,7 @@ class TCPpacket:
             sequence number of the packet and then updating the checksum of this 
             packet (because since the contents have changed)
         """
-        self.seq_nr = self.seq_nr + value
+        self.seq_nr = up_nr(self.seq_nr, value)
         self.update_checksum()
         
     def up_ack_nr(self, value):
@@ -112,7 +112,7 @@ class TCPpacket:
             ack number of the packet and then updating the checksum of this 
             packet (because the contents have changed)
         """
-        self.ack_nr = self.ack_nr + value
+        self.ack_nr = up_nr(self.ack_nr, value)
         self.update_checksum()
     
     def confirm_checksum(self):
@@ -120,7 +120,9 @@ class TCPpacket:
         recalculated_check = self.calculate_checksum()
         return own_checksum == recalculated_check
 
-    
+def up_nr(nr, up_value):
+    """" Adds the up_value to the sequence or ack number in a way that avoids overflow """
+    return (nr + up_value) % 65535    
 
 def unpack_from_socket(bytes):
     header_vars = unpack(header_format, bytes[0][0:10])

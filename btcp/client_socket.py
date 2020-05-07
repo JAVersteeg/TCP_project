@@ -3,6 +3,7 @@ from btcp.lossy_layer import LossyLayer
 from btcp.constants import *
 from btcp.packet import TCPpacket
 import btcp.packet, time, threading
+from concurrent.futures import ThreadPoolExecutor
 from random import randint
 from btcp.util import State
 
@@ -14,7 +15,7 @@ class BTCPClientSocket(BTCPSocket):
         self.window = window
         self.timeout = timeout
         self.termination_count = 5
-        self.threads = []
+        self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, CLIENT_IP, CLIENT_PORT, SERVER_IP, SERVER_PORT)
         self.state = State.CLOSED
         
@@ -24,9 +25,7 @@ class BTCPClientSocket(BTCPSocket):
         segment_type = segment.packet_type()
         if (segment_type == "SYN-ACK"):
             self.state = State.SYN_ACK_RECVD
-            ack_thread = threading.Thread(target=self.handshake_ack_thread, args=(segment,))
-            self.threads.append(ack_thread)
-            ack_thread.start()
+            self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN_ACK":
             self.state = State.FIN_ACK_RECVD
         else:
@@ -34,9 +33,7 @@ class BTCPClientSocket(BTCPSocket):
 
     # Initiate a three-way handshake with the server.
     def connect(self):
-        connect_thread = threading.Thread(target=self.con_establish_thread)
-        self.threads.append(connect_thread)
-        connect_thread.start()
+        self.thread_executor.submit(self.con_establish_thread)
         self.state = State.SYN_SEND
         
     # Send data originating from the application in a reliable way to the server
@@ -49,15 +46,13 @@ class BTCPClientSocket(BTCPSocket):
 
     # Clean up any state
     def close(self):
-        print("CLIENT CLOSED")
+        self.thread_executor.shutdown(wait=True)
         self._lossy_layer.destroy()
+        print("CLIENT CLOSED")
         
     # Initiate termination of connection with server
     def close_client(self):
-        close_thread = threading.Thread(target=self.con_close_thread)
-        self.threads.append(close_thread)
-        close_thread.start()
-        self.join_threads()
+        self.thread_executor.submit(self.con_close_thread)
         self.close()
     
     # Send the response to the server's ACK of the handshake.
@@ -77,7 +72,6 @@ class BTCPClientSocket(BTCPSocket):
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
         while True:
-            
             time.sleep(self.timeout/1000)
             if self.state != State.SYN_ACK_RECVD:
                 self._lossy_layer.send_segment(send_segment)

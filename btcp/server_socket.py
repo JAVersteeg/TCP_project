@@ -5,7 +5,7 @@ from btcp.constants import *
 from random import randint
 from btcp.util import State
 from btcp.packet import TCPpacket
-
+from concurrent.futures import ThreadPoolExecutor
 
 # The bTCP server socket
 # A server application makes use of the services provided by bTCP by calling accept, recv, and close
@@ -14,7 +14,7 @@ class BTCPServerSocket(BTCPSocket):
         super().__init__(window, timeout)
         self.window = window
         self.timeout = timeout
-        self.threads = []
+        self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, SERVER_IP, SERVER_PORT, CLIENT_IP, CLIENT_PORT)
         self.state = State.LISTEN
 
@@ -27,15 +27,12 @@ class BTCPServerSocket(BTCPSocket):
             pass
         if segment.packet_type() == "SYN":
             self.state = State.SYN_RECVD
-            response_thread = threading.Thread(target=self.handshake_response_thread, args=(segment,))
-            self.threads.append(response_thread)
-            response_thread.start()
+            self.thread_executor.submit(self.handshake_response_thread, segment)
         elif segment.packet_type() == "ACK":
             self.state = State.HNDSH_COMP
         elif segment.packet_type() == "FIN":
             self.state = State.FIN_RECVD
             self.close_connection()
-            time.sleep(2)
             self.close()
         else: 
             pass
@@ -50,7 +47,7 @@ class BTCPServerSocket(BTCPSocket):
 
     # Clean up any state
     def close(self):
-        self.join_threads()
+        self.thread_executor.shutdown(wait=True)
         print("DESTROY SERVER SOCKET")
         self._lossy_layer.destroy()
     

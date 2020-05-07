@@ -29,7 +29,10 @@ class BTCPClientSocket(BTCPSocket):
             self.state = State.SYN_ACK_RECVD
             self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN_ACK":
-            self.state = State.FIN_ACK_RECVD
+            # handle closing of socket
+        elif segment_type == "ACK":
+            # remove segment corresponding to this ACK from window
+            pass
         else:
             pass
 

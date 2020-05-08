@@ -90,6 +90,22 @@ class BTCPClientSocket(BTCPSocket):
             else:
                 self.state = State.HNDSH_COMP
                 break
+            
+    # Runnable function to close the connection with the server
+    def con_close_thread(self):
+        segment = TCPpacket()
+        segment.set_flags(False, False, True)
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
+        while True:
+            time.sleep(self.timeout/1000)
+            if self.state != State.FIN_ACK_RECVD and self.termination_count > 0:
+                self._lossy_layer.send_segment(send_segment)
+                self.termination_count -= 1
+            else:
+                self.state = State.CLOSED
+                self.close()
+                break  
 
     # Loading file
     # TODO: go one folder upwards to read the file

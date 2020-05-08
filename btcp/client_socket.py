@@ -33,8 +33,8 @@ class BTCPClientSocket(BTCPSocket):
             self.state = State.SYN_ACK_RECVD
             self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN-ACK":
-            self.state = State.FIN_ACK_RECVD
-        elif segment.packet_type() == "ACK":     
+            self.state = State.HNDSH_COMP
+        elif segment.packet_type() == "ACK":
             segment_ack_nr = getattr(segment, 'ack_nr')    
             entry = {str(segment_ack_nr) : segment}
             self.segment_buffer.update(entry)
@@ -68,7 +68,7 @@ class BTCPClientSocket(BTCPSocket):
         self.seq_nr = seq_nr
         segment = TCPpacket(seq_nr)
         segment.set_flags(False, True, False) # set SYN flag
-        send_segment = segment.pack()
+        send_segment = segment.pack()   
         self._lossy_layer.send_segment(send_segment)
         while True:
             time.sleep(self.timeout/1000)
@@ -88,7 +88,7 @@ class BTCPClientSocket(BTCPSocket):
         segment.set_flags(ACK=True,SYN=False,FIN=False) # set ACK flag
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
-        self.state = State.HNDSH_COMP
+        
             
     # Runnable function to close the connection with the server
     def con_close_thread(self):
@@ -194,7 +194,6 @@ class BTCPClientSocket(BTCPSocket):
                     self.window -= 1
                     self.windowLock.release()
                     t.start()
-                    print("sending_list in for loop", sending_list)
                 sending_list = []
             # when there are more packets remaining to be send then the window size
             else:

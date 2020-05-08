@@ -75,7 +75,6 @@ class BTCPClientSocket(BTCPSocket):
         segment.set_flags(False, True, False) # set SYN flag
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
-        self._lossy_layer.send_segment(send_segment)
         while True:
             time.sleep(self.timeout/1000)
             if self.state != State.SYN_ACK_RECVD:

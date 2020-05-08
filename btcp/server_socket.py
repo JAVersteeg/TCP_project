@@ -16,8 +16,8 @@ class BTCPServerSocket(BTCPSocket):
         self.timeout = timeout
         self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, SERVER_IP, SERVER_PORT, CLIENT_IP, CLIENT_PORT)
-        self.segment_buffer = {}    # segments that are received out of order
-        self.data_collection = []   # data section of segments that are received in order, gets turned into output file
+        self.segment_buffer = {}    # segments that are received out-of-order
+        self.data_collection = []   # data section of segments that are received in-order, eventually gets turned into output file
         self.hndsh_seq_nr = 0
         self.exp_seq_nr = 0         # sequence number of the next in-order packet.
         self.state = State.CLOSED
@@ -36,7 +36,8 @@ class BTCPServerSocket(BTCPSocket):
             elif segment.packet_type() == "ACK" and segment.get_ack_nr() == self.hndsh_seq_nr + 1:
                 self.state = State.HNDSH_COMP
                 # exp_seq_nr = segment.get_seq_nr() + 1
-                # exp_seq_nr = sequence number advertised by client in this segment.
+                self.close()
+                
             elif segment.packet_type() == "FIN":
                 self.state = State.FIN_RECVD
             elif segment.packet_type() == "DATA":     
@@ -64,6 +65,7 @@ class BTCPServerSocket(BTCPSocket):
     # Clean up any state
     def close(self):
         self._lossy_layer.destroy()
+        print("LL CLOSED")
     
     # Acknowledges the intitiation of a handshake with the client
     def handshake_response_thread(self, segment):
@@ -90,6 +92,7 @@ class BTCPServerSocket(BTCPSocket):
         segment.reset_seq_nr()
         segment.set_flags(ACK=True)
         self._lossy_layer.send_segment(segment)
+        self.close()
     
     # Continuously searches the buffer for the next in order segment.
     def update_buffer_thread(self):

@@ -33,8 +33,6 @@ class LossyLayer:
     # Flag the thread that it can stop and close the socket.
     def destroy(self):
         self._event.set()
-        self._thread.join()
-        print("Lossy layer closed")
         self._udp_sock.close()
 
     # Put the segment into the network

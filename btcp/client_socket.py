@@ -2,6 +2,7 @@ from btcp.btcp_socket import BTCPSocket
 from btcp.lossy_layer import LossyLayer
 from btcp.constants import *
 from btcp.packet import TCPpacket
+from btcp.packet import up_nr
 import btcp.packet, time, threading
 from concurrent.futures import ThreadPoolExecutor
 from random import randint
@@ -13,14 +14,16 @@ class BTCPClientSocket(BTCPSocket):
     def __init__(self, window, timeout):
         super().__init__(window, timeout)
         self.window = window
+        self.windowLock = threading.Lock()
+        self.segment_buffer = {}    # segments that are received out of order
+        # self.acks_list = [] # list of all received ACKS
         self.timeout = timeout
         self.termination_count = 5
         self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, CLIENT_IP, CLIENT_PORT, SERVER_IP, SERVER_PORT)
         self.state = State.CLOSED
-        self.hndsh_seq_nr = 0 # gets set after connect()
-        self.hndsh_ack_nr = 0 # gets set after connect()
-        self.seq_nr = 0
+        self.seq_nr = 0 # gets set after connect()
+        self.ack_nr = 0 # gets set after connect()
         
     # Called by the lossy layer from another thread whenever a segment arrives. 
     def lossy_layer_input(self, segment):
@@ -30,11 +33,11 @@ class BTCPClientSocket(BTCPSocket):
             self.state = State.SYN_ACK_RECVD
             self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN_ACK":
-            # handle closing of socket
+            # TODO: handle closing of socket
             pass
-        elif segment_type == "ACK":
-            # remove segment corresponding to this ACK from window
-            pass
+        elif segment.pack_type() == "ACK":     
+            segment_ack_nr = getattr(segment, 'ack_nr')            
+            self.segment_buffer.updateentry = {str(segment_ack_nr) : segment}
         else:
             pass
 
@@ -45,9 +48,9 @@ class BTCPClientSocket(BTCPSocket):
 
     # Send data originating from the application in a reliable way to the server
     def send(self, data):
-        #segments_list = load_file(data)
+        segments_list = self.load_file(data)
+        self.data_transfer(segments_list)
         # TODO: add functions to send data
-        pass
 
     # Perform a handshake to terminate a connection
     def disconnect(self):
@@ -70,7 +73,7 @@ class BTCPClientSocket(BTCPSocket):
     # Runnable function to establish a connection with the server
     def con_establish_thread(self):
         seq_nr = randint(0,65535) # random 16-bit integer
-        self.hndsh_seq_nr = seq_nr
+        self.seq_nr = seq_nr
         segment = TCPpacket(seq_nr)
         segment.set_flags(False, True, False) # set SYN flag
         send_segment = segment.pack()
@@ -99,7 +102,6 @@ class BTCPClientSocket(BTCPSocket):
             rawbytes = binary_file.read()
             return rawbytes
 
-    # TODO: add padding to final packet    
     def rawbytes_to_sections(self, rawbytes):
         """
             Takes the bytes and divides these into chunks of 1008 bytes (except the
@@ -115,18 +117,82 @@ class BTCPClientSocket(BTCPSocket):
                 data_sections.append(rawbytes)
                 rawbytes = b''
         return data_sections
-        
+
+    # TODO: add padding to final segment    
     def file_data_to_segments_list(self, file_data):
         """
             Takes the list of file_data (in chunks of 1008 bytes) and creates
             segments for each of those chunks. These segments are put in the
             segments_list and this segments_list is returned.
-        """    
+        """  
         segments_list = []
         for data in file_data:
             segment = TCPpacket(seq_nr=self.seq_nr, ack_nr=self.ack_nr, window=self.window)
             segment.set('data', data)
-            segment.up_seq_nr(segment.data_length)
-            seq_nr += segment.data_length  
+            self.seq_nr = up_nr(self.seq_nr, segment.data_length)
             segments_list.append(segment)
         return segments_list    
+
+    def packet_thread(self, segment):
+        """
+            First sends a packet and then checks the list of acks for 
+            [timeout] seconds to see if the corresponding ack has been received,
+            if not, a timeout is triggered. This timeout causes the packet to 
+            be resend
+        """
+        ack_received = False
+        
+        while not ack_received:
+            self._lossy_layer.send_segment(segment.pack())
+            ack_nr_segment = str(getattr(segment, 'syn_nr') + getattr(segment, 'data_length'))
+            time.sleep(self.timeout/1000) # wait for incomming ack
+            if self.segment_buffer[ack_nr_segment]: #ack received
+                self.windowLock.acquire()
+                self.window += 1
+                self.windowLock.release()
+                ack_received = True
+            else:
+                continue      
+
+    def data_transfer(self, segments_list):
+        """
+            Sends the file from the client to the server by distributing the
+            data over packets.
+        """
+        # acks_thread = threading.Thread(target=self.recv_acks_thread)
+        # acks_thread.start()
+        
+        window = self.window
+        thread_list = [threading.Thread(target=self.packet_thread, args= (segment,)) for segment in segments_list]
+        sending_list = thread_list
+        while (len(sending_list) > 0 ): # keeps looping until the list is empty
+            # when there are less packets remaining to be send then the window size
+            sending_list = sending_list
+            if len(sending_list) <= window:
+                for t in sending_list:
+                    self.windowLock.acquire()
+                    self.window -= 1
+                    self.windowLock.release()
+                    t.start()
+                sending_list = []
+            # when there are more packets remaining to be send then the window size
+            else:
+                number_of_threads = window
+                for t in sending_list[:number_of_threads]: # number_of_packets could be window size
+                    self.windowLock.acquire()
+                    window -= 1
+                    self.windowLock.release()
+                    t.start()
+                sending_list = sending_list[number_of_threads:]
+        
+        for thread in thread_list:
+            thread.join()
+        self.transfer_complete = True
+        # acks_thread.join()
+        # print("Length segments list: ", len(packet_list))
+        print("Data transmission is finished")
+
+
+  
+s = BTCPClientSocket(100, 100)
+print(s.load_file("./input.file"))

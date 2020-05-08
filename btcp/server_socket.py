@@ -36,16 +36,16 @@ class BTCPServerSocket(BTCPSocket):
             elif segment.packet_type() == "ACK" and segment.get_ack_nr() == self.hndsh_seq_nr + 1:
                 print("Server received ACK")
                 self.state = State.HNDSH_COMP
-                self.exp_seq_nr = segment.get_seq_nr() + 1
+                self.exp_seq_nr = segment.get_seq_nr()
             elif segment.packet_type() == "FIN":
                 self.state = State.FIN_RECVD
                 print("Server received FIN from client")
                 self.close_connection()
                 self.close()
-            elif segment.packet_type() == "DATA":     
+            elif segment.packet_type() == "DATA": 
+                data = getattr(segment, 'data')
                 self.send_data_ack(segment)
                 if getattr(segment, 'seq_nr') == self.exp_seq_nr:
-                    data = getattr(segment, 'data')
                     self.data_collection.append(data)
                     self.exp_seq_nr += 1
                 else:
@@ -115,7 +115,7 @@ class BTCPServerSocket(BTCPSocket):
                 del self.segment_buffer[seq_nr_key]
                 self.exp_seq_nr += 1
             except KeyError as error:
-                print(error)
+                continue
 
     # Converts the list of bytesblocks back into a file    
     def data_list_to_file(self, output_file_path):

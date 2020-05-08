@@ -75,7 +75,6 @@ class BTCPClientSocket(BTCPSocket):
             if self.state != State.SYN_ACK_RECVD:
                 self._lossy_layer.send_segment(send_segment)
             else:
-                self.state = State.HNDSH_COMP
                 break
             
     # Send the response to the server's ACK of the handshake.
@@ -89,6 +88,7 @@ class BTCPClientSocket(BTCPSocket):
         segment.set_flags(ACK=True,SYN=False,FIN=False) # set ACK flag
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
+        self.state = State.HNDSH_COMP
             
     # Runnable function to close the connection with the server
     def con_close_thread(self):

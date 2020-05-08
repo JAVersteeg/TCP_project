@@ -76,7 +76,7 @@ class TestbTCPFramework(unittest.TestCase):
         client = BTCPClientSocket(winsize, timeout)
         client.connect()
         # client sends content to server
-        
+        time.sleep(0.5)
         # server receives content from client
         
         # content received by server matches the content sent by client

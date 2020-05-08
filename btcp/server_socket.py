@@ -34,12 +34,12 @@ class BTCPServerSocket(BTCPSocket):
                 self.state = State.SYN_RECVD
                 self.thread_executor.submit(self.handshake_response_thread, segment)
             elif segment.packet_type() == "ACK" and segment.get_ack_nr() == self.hndsh_seq_nr + 1:
+                print("Server received ACK")
                 self.state = State.HNDSH_COMP
-                exp_seq_nr = segment.get_seq_nr() + 1
-                self.send_data_ack(segment)
-                self.close()
+                self.exp_seq_nr = segment.get_seq_nr() + 1
             elif segment.packet_type() == "FIN":
                 self.state = State.FIN_RECVD
+                print("Server received FIN from client")
                 self.close_connection()
                 self.close()
             elif segment.packet_type() == "DATA":     
@@ -72,24 +72,24 @@ class BTCPServerSocket(BTCPSocket):
     def handshake_response_thread(self, segment):
         seq_nr = randint(0,65535) - segment.get_seq_nr()
         ack_nr = segment.get_seq_nr() + 1
-        print("ACK NUMBER: ", ack_nr)
         segment.up_seq_nr(seq_nr)
         segment.up_ack_nr(ack_nr)
         self.hndsh_seq_nr = segment.get_seq_nr()
-        segment.set_flags(ACK=True, SYN=True)
-        self._lossy_layer.send_segment(segment.pack())
+        segment.set_flags(ACK=True, SYN=True, FIN=False)
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
         self.state = State.SYN_SEND
         while True: # as long as no ACK handshake segment is received
             time.sleep(self.timeout/1000)
             if (self.state != State.HNDSH_COMP):
-                self._lossy_layer.send_segment(segment.pack())
+                self._lossy_layer.send_segment(send_segment)
             else:
                 break
     
         # 
     def close_connection(self):
         segment = TCPpacket()
-        segment.set_flags(True, False, True)
+        segment.set_flags(ACK=True, SYN=False, FIN=True)
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
         
@@ -98,8 +98,9 @@ class BTCPServerSocket(BTCPSocket):
         segment.remove_data()
         segment.up_ack_nr(getattr(segment, 'seq_nr'))
         segment.reset_seq_nr()
-        segment.set_flags(ACK=True)
-        self._lossy_layer.send_segment(segment)
+        segment.set_flags(ACK=True, SYN=False, FIN=False)
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
         self.close()
     
     # Continuously searches the buffer for the next in order segment.

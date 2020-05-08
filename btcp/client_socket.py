@@ -31,15 +31,13 @@ class BTCPClientSocket(BTCPSocket):
         segment_type = segment.packet_type()
         if segment_type == "SYN-ACK" and getattr(segment, 'ack_nr') == self.seq_nr + 1:
             self.state = State.SYN_ACK_RECVD
-            print("SYN-ACK received")
             self.thread_executor.submit(self.handshake_ack_thread, segment)
-        elif segment_type == "FIN_ACK":
-            # TODO: handle closing of socket
-            self.state = State.HNDSH_COMP
-            pass
-        elif segment.pack_type() == "ACK":     
-            segment_ack_nr = getattr(segment, 'ack_nr')            
-            self.segment_buffer.updateentry = {str(segment_ack_nr) : segment}
+        elif segment_type == "FIN-ACK":
+            self.state = State.FIN_ACK_RECVD
+        elif segment.packet_type() == "ACK":     
+            segment_ack_nr = getattr(segment, 'ack_nr')    
+            entry = {str(segment_ack_nr) : segment}
+            self.segment_buffer.update(entry)
         else:
             pass
 
@@ -57,12 +55,12 @@ class BTCPClientSocket(BTCPSocket):
     # Perform a handshake to terminate a connection
     def disconnect(self):
         self.thread_executor.submit(self.con_close_thread)
+        self.close()
 
     # Clean up any state
     def close(self):
         self.thread_executor.shutdown(wait=True)
         self._lossy_layer.destroy()
-        print("CLIENT CLOSED")
     
     # Runnable function to establish a connection with the server
     def con_establish_thread(self):
@@ -88,9 +86,8 @@ class BTCPClientSocket(BTCPSocket):
         ack_nr = self.ack_nr
         segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
         segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
-        segment.set_flags(ACK=True) # set ACK flag
+        segment.set_flags(ACK=True,SYN=False,FIN=False) # set ACK flag
         send_segment = segment.pack()
-        print("SEND ACK")
         self._lossy_layer.send_segment(send_segment)
             
     # Runnable function to close the connection with the server
@@ -106,7 +103,6 @@ class BTCPClientSocket(BTCPSocket):
                 self.termination_count -= 1
             else:
                 self.state = State.CLOSED
-                self.close()
                 break  
 
     # Loading file

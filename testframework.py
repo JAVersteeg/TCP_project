@@ -2,6 +2,7 @@ import unittest
 import socket
 import time
 import sys
+import filecmp
 from btcp.server_socket import BTCPServerSocket
 from btcp.client_socket import BTCPClientSocket
 
@@ -79,14 +80,18 @@ class TestbTCPFramework(unittest.TestCase):
         server = self.setUpServer()
         time.sleep(0.05)
         # launch localhost client connecting to server
-        # client = BTCPClientSocket(winsize, timeout)
         client = self.setUpClient()
         # client sends content to server
+        time.sleep(0.5)
         client.send("./input.file")
+        time.sleep(0.5)
         # server receives content from client
-        server.
+        server.recv("./output.file")
         # content received by server matches the content sent by client
-        assert()
+        self.assertTrue(filecmp.cmp("./input.file", "./output.file"))
+        # teardown
+        client.disconnect()
+        self.tearDown(server)
     
     def test_flipping_network(self):
         """reliability over network with bit flips 

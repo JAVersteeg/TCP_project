@@ -29,15 +29,15 @@ class BTCPClientSocket(BTCPSocket):
     def lossy_layer_input(self, segment):
         segment = btcp.packet.unpack_from_socket(segment)
         segment_type = segment.packet_type()
-        if segment_type == "SYN-ACK" and getattr(segment, 'ack_nr') == self.hndsh_seq_nr + 1:
+        if segment_type == "SYN-ACK" and getattr(segment, 'ack_nr') == self.seq_nr + 1:
             self.state = State.SYN_ACK_RECVD
             self.thread_executor.submit(self.handshake_ack_thread, segment)
-        elif segment_type == "FIN_ACK":
-            # TODO: handle closing of socket
-            pass
-        elif segment.pack_type() == "ACK":     
-            segment_ack_nr = getattr(segment, 'ack_nr')            
-            self.segment_buffer.updateentry = {str(segment_ack_nr) : segment}
+        elif segment_type == "FIN-ACK":
+            self.state = State.FIN_ACK_RECVD
+        elif segment.packet_type() == "ACK":     
+            segment_ack_nr = getattr(segment, 'ack_nr')    
+            entry = {str(segment_ack_nr) : segment}
+            self.segment_buffer.update(entry)
         else:
             pass
 
@@ -54,21 +54,13 @@ class BTCPClientSocket(BTCPSocket):
 
     # Perform a handshake to terminate a connection
     def disconnect(self):
-        pass
+        self.thread_executor.submit(self.con_close_thread)
+        self.close()
 
     # Clean up any state
     def close(self):
+        self.thread_executor.shutdown(wait=True)
         self._lossy_layer.destroy()
-    
-    # Send the response to the server's ACK of the handshake.
-    def handshake_ack_thread(self, segment):
-        seq_nr = segment.get_ack_nr()
-        ack_nr = segment.get_seq_nr() + 1
-        segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
-        segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
-        segment.set_flags(True, False, False) # set ACK flag
-        send_segment = segment.pack()
-        self._lossy_layer.send_segment(send_segment)
     
     # Runnable function to establish a connection with the server
     def con_establish_thread(self):
@@ -85,6 +77,33 @@ class BTCPClientSocket(BTCPSocket):
             else:
                 self.state = State.HNDSH_COMP
                 break
+            
+    # Send the response to the server's ACK of the handshake.
+    def handshake_ack_thread(self, segment):
+        self.seq_nr = segment.get_ack_nr()
+        self.ack_nr = segment.get_seq_nr() + 1
+        seq_nr = self.seq_nr
+        ack_nr = self.ack_nr
+        segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
+        segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
+        segment.set_flags(ACK=True,SYN=False,FIN=False) # set ACK flag
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
+            
+    # Runnable function to close the connection with the server
+    def con_close_thread(self):
+        segment = TCPpacket()
+        segment.set_flags(False, False, True)
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
+        while True:
+            time.sleep(self.timeout/1000)
+            if self.state != State.FIN_ACK_RECVD and self.termination_count > 0:
+                self._lossy_layer.send_segment(send_segment)
+                self.termination_count -= 1
+            else:
+                self.state = State.CLOSED
+                break  
 
     # Loading file
     # TODO: go one folder upwards to read the file
@@ -144,14 +163,15 @@ class BTCPClientSocket(BTCPSocket):
         
         while not ack_received:
             self._lossy_layer.send_segment(segment.pack())
-            ack_nr_segment = str(getattr(segment, 'syn_nr') + getattr(segment, 'data_length'))
+            ack_nr_segment = str(getattr(segment, 'seq_nr'))
             time.sleep(self.timeout/1000) # wait for incomming ack
-            if self.segment_buffer[ack_nr_segment]: #ack received
+            try:
+                self.segment_buffer[ack_nr_segment] #ack received
                 self.windowLock.acquire()
                 self.window += 1
                 self.windowLock.release()
                 ack_received = True
-            else:
+            except KeyError:
                 continue      
 
     def data_transfer(self, segments_list):
@@ -174,6 +194,7 @@ class BTCPClientSocket(BTCPSocket):
                     self.window -= 1
                     self.windowLock.release()
                     t.start()
+                    print("sending_list in for loop", sending_list)
                 sending_list = []
             # when there are more packets remaining to be send then the window size
             else:
@@ -191,8 +212,3 @@ class BTCPClientSocket(BTCPSocket):
         # acks_thread.join()
         # print("Length segments list: ", len(packet_list))
         print("Data transmission is finished")
-
-
-  
-s = BTCPClientSocket(100, 100)
-print(s.load_file("./input.file"))

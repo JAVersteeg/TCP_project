@@ -34,6 +34,7 @@ class BTCPClientSocket(BTCPSocket):
             self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN_ACK":
             # TODO: handle closing of socket
+            self.state = State.HNDSH_COMP
             pass
         elif segment.pack_type() == "ACK":     
             segment_ack_nr = getattr(segment, 'ack_nr')            

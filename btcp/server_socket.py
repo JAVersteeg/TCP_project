@@ -46,7 +46,7 @@ class BTCPServerSocket(BTCPSocket):
                 self.send_data_ack(segment)
                 if getattr(segment, 'seq_nr') == self.exp_seq_nr:
                     data = getattr(segment, 'data')
-                    self.data_collection.append(data)
+                    self.data_collection = self.data_collection.append(data)
                     self.exp_seq_nr += 1
                 else:
                     seq_nr = getattr(segment, 'seq_nr')

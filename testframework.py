@@ -3,11 +3,14 @@ import socket
 import time
 import sys
 import filecmp
+import os
 from btcp.server_socket import BTCPServerSocket
 from btcp.client_socket import BTCPClientSocket
 
 timeout=100
 winsize=100
+inputfile = "./input.file"
+outputfile = "./output.file" 
 intf="lo"
 netem_add="sudo tc qdisc add dev {} root netem".format(intf)
 netem_change="sudo tc qdisc change dev {} root netem {}".format(intf,"{}")
@@ -74,21 +77,24 @@ class TestbTCPFramework(unittest.TestCase):
         # close server 
         server.close()
 
+        # remove output
+        os.remove(outputfile)
+
     def test_ideal_network(self):
         """reliability over an ideal framework"""
         # setup environment (nothing to set)
         server = self.setUpServer()
-        time.sleep(0.05)
+        time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
-        # client sends content to server
         time.sleep(0.5)
-        client.send("./input.file")
+        # client sends content to server
+        client.send(inputfile)
         time.sleep(0.5)
         # server receives content from client
-        server.recv("./output.file")
+        server.recv(outputfile)
         # content received by server matches the content sent by client
-        self.assertTrue(filecmp.cmp("./input.file", "./output.file"))
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
         self.tearDown(server)
@@ -98,80 +104,111 @@ class TestbTCPFramework(unittest.TestCase):
         (which sometimes results in lower layer packet loss)"""
         # setup environment
         run_command(netem_change.format("corrupt 1%"))
-        
+        server = self.setUpServer()
+        time.sleep(0.5)
         # launch localhost client connecting to server
-        
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(inputfile)
         # server receives content from client
-        
+        server.recv(outputfile)
         # content received by server matches the content sent by client
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
+        # teardown
+        client.disconnect()
+        self.tearDown(server, outputfile)
 
     def test_duplicates_network(self):
         """reliability over network with duplicate packets"""
         # setup environment
         run_command(netem_change.format("duplicate 10%"))
-        
+        server = self.setUpServer()
+        time.sleep(0.5)
         # launch localhost client connecting to server
-        
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(inputfile)
         # server receives content from client
-        
+        server.recv(outputfile)
         # content received by server matches the content sent by client
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
+        # teardown
+        client.disconnect()
+        self.tearDown(server, outputfile)
 
     def test_lossy_network(self):
         """reliability over network with packet loss"""
         # setup environment
         run_command(netem_change.format("loss 10% 25%"))
+        server = self.setUpServer()
+        time.sleep(0.5)
         # launch localhost client connecting to server
-               
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(inputfile)
         # server receives content from client
-        
+        server.recv(outputfile)
         # content received by server matches the content sent by client
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
+        # teardown
+        client.disconnect()
+        self.tearDown(server, outputfile)
 
 
     def test_reordering_network(self):
         """reliability over network with packet reordering"""
         # setup environment
         run_command(netem_change.format("delay 20ms reorder 25% 50%"))
-        
+        server = self.setUpServer()
+        time.sleep(0.5)
         # launch localhost client connecting to server
-        
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(inputfile)
         # server receives content from client
-        
+        server.recv(outputfile)
         # content received by server matches the content sent by client
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
+        # teardown
+        client.disconnect()
+        self.tearDown(server, outputfile)
         
     def test_delayed_network(self):
         """reliability over network with delay relative to the timeout value"""
         # setup environment
         run_command(netem_change.format("delay "+str(timeout)+"ms 20ms"))
-        
+        server = self.setUpServer()
+        time.sleep(0.5)
         # launch localhost client connecting to server
-        
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(inputfile)
         # server receives content from client
-        
+        server.recv(outputfile)
         # content received by server matches the content sent by client
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
+        # teardown
+        client.disconnect()
+        self.tearDown(server, outputfile)
     
     def test_allbad_network(self):
         """reliability over network with all of the above problems"""
 
         # setup environment
         run_command(netem_change.format("corrupt 1% duplicate 10% loss 10% 25% delay 20ms reorder 25% 50%"))
-        
+        server = self.setUpServer()
+        time.sleep(0.5)
         # launch localhost client connecting to server
-        
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(inputfile)
         # server receives content from client
-        
-        # content received by server matches the content sent by client   
+        server.recv(outputfile)
+        # content received by server matches the content sent by client
+        self.assertTrue(filecmp.cmp(inputfile, outputfile))
+        # teardown
+        client.disconnect()
+        self.tearDown(server, outputfile)
 
   
 #    def test_command(self):
@@ -186,9 +223,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="bTCP tests")
     parser.add_argument("-w", "--window", help="Define bTCP window size used", type=int, default=100)
     parser.add_argument("-t", "--timeout", help="Define the timeout value used (ms)", type=int, default=timeout)
+    parser.add_argument("-i", "--input", help="File to send", default="input.file")
+    parser.add_argument("-o", "--output", help="Where to store the file", default="output.file")
     args, extra = parser.parse_known_args()
     timeout = args.timeout
     winsize = args.window
+    inputfile = "./" + args.input
+    outputfile = "./" + args.output 
     
     # Pass the extra arguments to unittest
     sys.argv[1:] = extra

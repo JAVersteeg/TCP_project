@@ -80,6 +80,7 @@ class TestbTCPFramework(unittest.TestCase):
         # server receives content from client
         
         # content received by server matches the content sent by client
+        client.disconnect()
     
     def test_flipping_network(self):
         """reliability over network with bit flips 

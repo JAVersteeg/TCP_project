@@ -35,11 +35,13 @@ class BTCPServerSocket(BTCPSocket):
                 self.thread_executor.submit(self.handshake_response_thread, segment)
             elif segment.packet_type() == "ACK" and segment.get_ack_nr() == self.hndsh_seq_nr + 1:
                 self.state = State.HNDSH_COMP
-                # exp_seq_nr = segment.get_seq_nr() + 1
+                exp_seq_nr = segment.get_seq_nr() + 1
+                self.send_data_ack(segment)
                 self.close()
-                
             elif segment.packet_type() == "FIN":
                 self.state = State.FIN_RECVD
+                self.close_connection()
+                self.close()
             elif segment.packet_type() == "DATA":     
                 self.send_data_ack(segment)
                 if segment.getattr(segment, 'seq_nr') == self.exp_seq_nr:
@@ -65,7 +67,6 @@ class BTCPServerSocket(BTCPSocket):
     # Clean up any state
     def close(self):
         self._lossy_layer.destroy()
-        print("LL CLOSED")
     
     # Acknowledges the intitiation of a handshake with the client
     def handshake_response_thread(self, segment):

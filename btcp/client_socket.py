@@ -29,8 +29,9 @@ class BTCPClientSocket(BTCPSocket):
     def lossy_layer_input(self, segment):
         segment = btcp.packet.unpack_from_socket(segment)
         segment_type = segment.packet_type()
-        if segment_type == "SYN-ACK" and getattr(segment, 'ack_nr') == self.hndsh_seq_nr + 1:
+        if segment_type == "SYN-ACK" and getattr(segment, 'ack_nr') == self.seq_nr + 1:
             self.state = State.SYN_ACK_RECVD
+            print("SYN-ACK received")
             self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN_ACK":
             # TODO: handle closing of socket
@@ -63,16 +64,6 @@ class BTCPClientSocket(BTCPSocket):
         self._lossy_layer.destroy()
         print("CLIENT CLOSED")
     
-    # Send the response to the server's ACK of the handshake.
-    def handshake_ack_thread(self, segment):
-        seq_nr = segment.get_ack_nr()
-        ack_nr = segment.get_seq_nr() + 1
-        segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
-        segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
-        segment.set_flags(True, False, False) # set ACK flag
-        send_segment = segment.pack()
-        self._lossy_layer.send_segment(send_segment)
-    
     # Runnable function to establish a connection with the server
     def con_establish_thread(self):
         seq_nr = randint(0,65535) # random 16-bit integer
@@ -88,6 +79,19 @@ class BTCPClientSocket(BTCPSocket):
             else:
                 self.state = State.HNDSH_COMP
                 break
+            
+    # Send the response to the server's ACK of the handshake.
+    def handshake_ack_thread(self, segment):
+        self.seq_nr = segment.get_ack_nr()
+        self.ack_nr = segment.get_seq_nr() + 1
+        seq_nr = self.seq_nr
+        ack_nr = self.ack_nr
+        segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
+        segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
+        segment.set_flags(True, False, False) # set ACK flag
+        send_segment = segment.pack()
+        print("SEND ACK")
+        self._lossy_layer.send_segment(send_segment)
             
     # Runnable function to close the connection with the server
     def con_close_thread(self):

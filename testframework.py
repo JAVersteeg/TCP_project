@@ -100,14 +100,15 @@ class TestbTCPFramework(unittest.TestCase):
     def test_flipping_network(self):
         """reliability over network with bit flips 
         (which sometimes results in lower layer packet loss)"""
-        # setup environment
-        run_command(netem_change.format("corrupt 1%"))
+        # setup environment (nothing to set)
         server = self.setUpServer()
         time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
+        time.sleep(0.5)
         # client sends content to server
         client.send(inputfile)
+        time.sleep(0.5)
         # server receives content from client
         server.recv(outputfile)
         # content received by server matches the content sent by client
@@ -119,14 +120,15 @@ class TestbTCPFramework(unittest.TestCase):
 
     def test_duplicates_network(self):
         """reliability over network with duplicate packets"""
-        # setup environment
-        run_command(netem_change.format("duplicate 10%"))
+        # setup environment (nothing to set)
         server = self.setUpServer()
         time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
+        time.sleep(0.5)
         # client sends content to server
         client.send(inputfile)
+        time.sleep(0.5)
         # server receives content from client
         server.recv(outputfile)
         # content received by server matches the content sent by client
@@ -138,14 +140,15 @@ class TestbTCPFramework(unittest.TestCase):
 
     def test_lossy_network(self):
         """reliability over network with packet loss"""
-        # setup environment
-        run_command(netem_change.format("loss 10% 25%"))
+        # setup environment (nothing to set)
         server = self.setUpServer()
         time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
+        time.sleep(0.5)
         # client sends content to server
         client.send(inputfile)
+        time.sleep(0.5)
         # server receives content from client
         server.recv(outputfile)
         # content received by server matches the content sent by client
@@ -158,14 +161,15 @@ class TestbTCPFramework(unittest.TestCase):
 
     def test_reordering_network(self):
         """reliability over network with packet reordering"""
-        # setup environment
-        run_command(netem_change.format("delay 20ms reorder 25% 50%"))
+        # setup environment (nothing to set)
         server = self.setUpServer()
         time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
+        time.sleep(0.5)
         # client sends content to server
         client.send(inputfile)
+        time.sleep(0.5)
         # server receives content from client
         server.recv(outputfile)
         # content received by server matches the content sent by client
@@ -177,14 +181,15 @@ class TestbTCPFramework(unittest.TestCase):
         
     def test_delayed_network(self):
         """reliability over network with delay relative to the timeout value"""
-        # setup environment
-        run_command(netem_change.format("delay "+str(timeout)+"ms 20ms"))
+        # setup environment (nothing to set)
         server = self.setUpServer()
         time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
+        time.sleep(0.5)
         # client sends content to server
         client.send(inputfile)
+        time.sleep(0.5)
         # server receives content from client
         server.recv(outputfile)
         # content received by server matches the content sent by client
@@ -197,14 +202,15 @@ class TestbTCPFramework(unittest.TestCase):
     def test_allbad_network(self):
         """reliability over network with all of the above problems"""
 
-        # setup environment
-        run_command(netem_change.format("corrupt 1% duplicate 10% loss 10% 25% delay 20ms reorder 25% 50%"))
+        # setup environment (nothing to set)
         server = self.setUpServer()
         time.sleep(0.5)
         # launch localhost client connecting to server
         client = self.setUpClient()
+        time.sleep(0.5)
         # client sends content to server
         client.send(inputfile)
+        time.sleep(0.5)
         # server receives content from client
         server.recv(outputfile)
         # content received by server matches the content sent by client

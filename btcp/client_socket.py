@@ -88,7 +88,7 @@ class BTCPClientSocket(BTCPSocket):
         ack_nr = self.ack_nr
         segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
         segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
-        segment.set_flags(True, False, False) # set ACK flag
+        segment.set_flags(ACK=True) # set ACK flag
         send_segment = segment.pack()
         print("SEND ACK")
         self._lossy_layer.send_segment(send_segment)

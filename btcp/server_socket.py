@@ -86,6 +86,13 @@ class BTCPServerSocket(BTCPSocket):
             else:
                 break
     
+        # 
+    def close_connection(self):
+        segment = TCPpacket()
+        segment.set_flags(True, False, True)
+        send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
+        
     # Send acknowledgement of a data-type segment.
     def send_data_ack(self, segment):
         segment.remove_data()

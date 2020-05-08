@@ -3,9 +3,9 @@ from btcp.lossy_layer import LossyLayer
 from btcp.btcp_socket import BTCPSocket
 from btcp.constants import *
 from random import randint
-from btcp.util import State
 from btcp.packet import TCPpacket
 from concurrent.futures import ThreadPoolExecutor
+from btcp.state import State
 
 # The bTCP server socket
 # A server application makes use of the services provided by bTCP by calling accept, recv, and close
@@ -16,13 +16,13 @@ class BTCPServerSocket(BTCPSocket):
         self.timeout = timeout
         self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, SERVER_IP, SERVER_PORT, CLIENT_IP, CLIENT_PORT)
-        self.state = State.LISTEN
+        self.state = State.CLOSED
 
     # Called by the lossy layer from another thread whenever a segment arrives
     def lossy_layer_input(self, segment):
         segment = btcp.packet.unpack_from_socket(segment)
         
-        if not segment.confirm_checksum():
+        if not segment.confirm_checksum() or self.state == State.CLOSED:
             # discard segment
             pass
         if segment.packet_type() == "SYN":
@@ -39,7 +39,7 @@ class BTCPServerSocket(BTCPSocket):
 
     # Wait for the client to initiate a three-way handshake
     def accept(self):
-        pass
+        self.state = State.LISTEN
 
     # Send any incoming data to the application layer
     def recv(self):

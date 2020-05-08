@@ -5,7 +5,7 @@ from btcp.packet import TCPpacket
 import btcp.packet, time, threading
 from concurrent.futures import ThreadPoolExecutor
 from random import randint
-from btcp.util import State
+from btcp.state import State
 
 # bTCP client socket
 # A client application makes use of the services provided by bTCP by calling connect, send, disconnect, and close

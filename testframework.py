@@ -16,15 +16,15 @@ netem_del="sudo tc qdisc del dev {} root netem".format(intf)
 def run_command_with_output(command, input=None, cwd=None, shell=True):
     import subprocess
     try:
-      process = subprocess.Popen(command, cwd=cwd, shell=shell, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        process = subprocess.Popen(command, cwd=cwd, shell=shell, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
     except Exception as inst:
-      print("problem running command : \n   ", str(command))
+        print("problem running command : \n   ", str(command))
 
     [stdoutdata, stderrdata]=process.communicate(input)  # no pipes set for stdin/stdout/stdout streams so does effectively only just wait for process ends  (same as process.wait()
 
     if process.returncode:
-      print(stderrdata)
-      print("problem running command : \n   ", str(command), " ",process.returncode)
+        print(stderrdata)
+        print("problem running command : \n   ", str(command), " ",process.returncode)
 
     return stdoutdata
 
@@ -55,28 +55,34 @@ class TestbTCPFramework(unittest.TestCase):
         # launch localhost server
         server = BTCPServerSocket(winsize, timeout)
         server.accept()
-        
+        return server
+       
     def setUpClient(self):
         """Set up client for testing"""
         # launch client
+        # TODO: sleep can be added if there is a race condition
+        client = BTCPClientSocket(winsize, timeout)
+        client.connect()
+        return client
 
-    def tearDown(self):
+    def tearDown(self, server):
         """Clean up after testing"""
         # clean the environment
         run_command(netem_del)
         
-        # close server        
+        # close server 
+        server.close()
 
     def test_ideal_network(self):
         """reliability over an ideal framework"""
         # setup environment (nothing to set)
-        self.setUpServer()
+        server = self.setUpServer()
         time.sleep(0.05)
         # launch localhost client connecting to server
-        client = BTCPClientSocket(winsize, timeout)
-        client.connect()
+        # client = BTCPClientSocket(winsize, timeout)
+        client = self.setUpClient()
         # client sends content to server
-        
+        client.send(data)
         # server receives content from client
         
         # content received by server matches the content sent by client

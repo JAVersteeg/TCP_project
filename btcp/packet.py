@@ -97,15 +97,13 @@ class TCPpacket:
         return self.ack_nr
     
     def up_seq_nr(self, value):
-        """
-            Updates the sequence number of a packet by adding 'value' to the current
+        """ Updates the sequence number of a packet by adding 'value' to the current
             sequence number of the packet and then updating the checksum of this 
-            packet (because since the contents have changed)
-        """
+            packet (because since the contents have changed) """
         self.seq_nr = up_nr(self.seq_nr, value)
         self.update_checksum()
         
-        # Reset sequence number to 1 to acknowledge a data packet.
+    # Reset sequence number to 1 to acknowledge a data packet.
     def reset_seq_nr(self):
         self.seq_nr = 1
         
@@ -127,6 +125,7 @@ def up_nr(nr, up_value):
     """" Adds the up_value to the sequence or ack number in a way that avoids overflow """
     return (nr + up_value) % 65535    
 
+# Unpack a packet that is received by the socket to be able to handle and change the data in it.
 def unpack_from_socket(bytes):
     header_vars = unpack(header_format, bytes[0][0:10])
     data = bytes[0][10:]

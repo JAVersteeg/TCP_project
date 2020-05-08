@@ -18,18 +18,20 @@ class BTCPClientSocket(BTCPSocket):
         self.thread_executor = ThreadPoolExecutor(max_workers=window)
         self._lossy_layer = LossyLayer(self, CLIENT_IP, CLIENT_PORT, SERVER_IP, SERVER_PORT)
         self.state = State.CLOSED
-        self.seq = 0 # gets set after connect()
-        self.ack = 0 # gets set after connect()
+        self.hndsh_seq_nr = 0 # gets set after connect()
+        self.hndsh_ack_nr = 0 # gets set after connect()
+        self.seq_nr = 0
         
     # Called by the lossy layer from another thread whenever a segment arrives. 
     def lossy_layer_input(self, segment):
         segment = btcp.packet.unpack_from_socket(segment)
         segment_type = segment.packet_type()
-        if (segment_type == "SYN-ACK"):
+        if segment_type == "SYN-ACK" and getattr(segment, 'ack_nr') == self.hndsh_seq_nr + 1:
             self.state = State.SYN_ACK_RECVD
             self.thread_executor.submit(self.handshake_ack_thread, segment)
         elif segment_type == "FIN_ACK":
             # handle closing of socket
+            pass
         elif segment_type == "ACK":
             # remove segment corresponding to this ACK from window
             pass
@@ -57,10 +59,10 @@ class BTCPClientSocket(BTCPSocket):
     
     # Send the response to the server's ACK of the handshake.
     def handshake_ack_thread(self, segment):
-        seq_nr = segment.get_ack_nr() + 1
+        seq_nr = segment.get_ack_nr()
         ack_nr = segment.get_seq_nr() + 1
         segment.up_seq_nr(seq_nr - (ack_nr -1)) # remove old seq_nr (which is now ack_nr) and replace by new seq_nr
-        segment.up_ack_nr(ack_nr - seq_nr) # remove als ack_nr (which is now seq_nr) and replace by new ack_nr
+        segment.up_ack_nr(ack_nr - seq_nr + 0) # remove old ack_nr (which is now seq_nr) and replace by new ack_nr
         segment.set_flags(True, False, False) # set ACK flag
         send_segment = segment.pack()
         self._lossy_layer.send_segment(send_segment)
@@ -68,9 +70,11 @@ class BTCPClientSocket(BTCPSocket):
     # Runnable function to establish a connection with the server
     def con_establish_thread(self):
         seq_nr = randint(0,65535) # random 16-bit integer
+        self.hndsh_seq_nr = seq_nr
         segment = TCPpacket(seq_nr)
         segment.set_flags(False, True, False) # set SYN flag
         send_segment = segment.pack()
+        self._lossy_layer.send_segment(send_segment)
         self._lossy_layer.send_segment(send_segment)
         while True:
             time.sleep(self.timeout/1000)

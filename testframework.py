@@ -82,10 +82,11 @@ class TestbTCPFramework(unittest.TestCase):
         # client = BTCPClientSocket(winsize, timeout)
         client = self.setUpClient()
         # client sends content to server
-        client.send(data)
+        client.send("./input.file")
         # server receives content from client
-        
+        server.
         # content received by server matches the content sent by client
+        assert()
     
     def test_flipping_network(self):
         """reliability over network with bit flips 

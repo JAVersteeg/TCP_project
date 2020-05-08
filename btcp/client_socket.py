@@ -55,11 +55,15 @@ class BTCPClientSocket(BTCPSocket):
 
     # Perform a handshake to terminate a connection
     def disconnect(self):
-        pass
+        self.thread_executor.submit(self.con_close_thread)
+            # move .close() to thread function
+        self.close()
 
     # Clean up any state
     def close(self):
+        self.thread_executor.shutdown(wait=True)
         self._lossy_layer.destroy()
+        print("CLIENT CLOSED")
     
     # Send the response to the server's ACK of the handshake.
     def handshake_ack_thread(self, segment):

@@ -191,8 +191,3 @@ class BTCPClientSocket(BTCPSocket):
         # acks_thread.join()
         # print("Length segments list: ", len(packet_list))
         print("Data transmission is finished")
-
-
-  
-s = BTCPClientSocket(100, 100)
-print(s.load_file("./input.file"))

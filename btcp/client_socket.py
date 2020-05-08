@@ -92,9 +92,4 @@ class BTCPClientSocket(BTCPSocket):
                 self.termination_count -= 1
             else:
                 self.state = State.CLOSED
-                break
-            
-    def join_threads(self):
-        for t in self.threads:
-            t.join()
-        
+                break      

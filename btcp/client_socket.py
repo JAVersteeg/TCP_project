@@ -56,8 +56,6 @@ class BTCPClientSocket(BTCPSocket):
     # Perform a handshake to terminate a connection
     def disconnect(self):
         self.thread_executor.submit(self.con_close_thread)
-            # move .close() to thread function
-        self.close()
 
     # Clean up any state
     def close(self):

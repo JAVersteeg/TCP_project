@@ -4,6 +4,7 @@ class State(Enum):
     CLOSED = 0
     LISTEN = 1
     SYN_SEND = 2
+    SYN_ACK_SEND = 15
     SYN_RECVD = 3
     SYN_ACK_RECVD = 12
     FIN_RECVD = 14

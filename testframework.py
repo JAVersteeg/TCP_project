@@ -69,13 +69,10 @@ class TestbTCPFramework(unittest.TestCase):
         client.connect()
         return client
 
-    def tearDown(self, server):
+    def tearDown(self):
         """Clean up after testing"""
         # clean the environment
         run_command(netem_del)
-        
-        # close server 
-        server.close()
 
         # remove output
         os.remove(outputfile)
@@ -97,7 +94,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server)
+        server.close
+        self.tearDown()
     
     def test_flipping_network(self):
         """reliability over network with bit flips 
@@ -116,7 +114,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server, outputfile)
+        server.close
+        self.tearDown()
 
     def test_duplicates_network(self):
         """reliability over network with duplicate packets"""
@@ -134,7 +133,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server, outputfile)
+        server.close
+        self.tearDown()
 
     def test_lossy_network(self):
         """reliability over network with packet loss"""
@@ -152,7 +152,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server, outputfile)
+        server.close
+        self.tearDown()
 
 
     def test_reordering_network(self):
@@ -171,7 +172,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server, outputfile)
+        server.close
+        self.tearDown()
         
     def test_delayed_network(self):
         """reliability over network with delay relative to the timeout value"""
@@ -189,7 +191,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server, outputfile)
+        server.close
+        self.tearDown()
     
     def test_allbad_network(self):
         """reliability over network with all of the above problems"""
@@ -208,7 +211,8 @@ class TestbTCPFramework(unittest.TestCase):
         self.assertTrue(filecmp.cmp(inputfile, outputfile))
         # teardown
         client.disconnect()
-        self.tearDown(server, outputfile)
+        server.close
+        self.tearDown()
 
   
 #    def test_command(self):
